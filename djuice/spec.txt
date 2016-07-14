@@ -1,0 +1,99 @@
+We need to scrape all phones from this page:
+
+BREAKDOWN OF INDEX PAGE:
+
+https://nettbutikk.djuice.no/
+
+* Make sure no filters are enables, so all phones are shown. Default is no filters.
+
+All phones on this page needs scraping. Specificationf or sub page of each phone below:
+
+Marked fields:
+
+A: PhoneName,ColorName  -> This is the phone model name, followed by ",", followed by
+                           the name of the color (in Norwegian for this particurlar site).
+                           You will see the color name change if clicking on the color icons
+                           as marked by C: Color
+B: Stock                -> Number of phones in stock for each color. This sometimes have weird
+                           texts, but for now just copy the entire field into "Stock" (see data
+                           structure below).
+C: Color                -> Available colors for this phone model. The reason why we apparently
+                           need to relate to this field, is because the color name itself isn't
+                           found on the sub page for each individual model for some reason.
+
+BREAKDOWN OF SUB PAGE:
+
+https://nettbutikk.djuice.no/mobil/samsung-galaxy-s7-32gb/?vid=3913&sid=303
+
+
+I have marked the fields in the screen capture, labeled as following:
+
+
+A: PhoneName     -> Samsung Galaxy S7   (phone model)
+B: PhoneColor    -> These are 1 to X number of colors, for each model. Pricing data for
+                    each color needs to be captured. Unfortunately, the only way to obtain
+                    the name for each color, seems to be grabbing it off the index page
+                    as previously described.
+C: Plan          -> 'NONSTOP M'   (this is the name of the Plan), the plan field is normally
+                    repeated 1-5 times for each model.
+D: UpfrontAmount -> 1.499,-  (this is the upfront amount to pay for the phone, varies
+                    according to the E: field selection.
+E: MonthlyAmount -> List of monthly payment options (for this page, 249, 499, and 599).
+F: TotalAmount   -> Doesn't strictly need parsing, but it's nice as a test of whether
+                    D+E is parsed correctly.
+
+So, based upon this web page, I'd like up to end up with a data structure like the following:
+
+   { 
+     "Samsung Galaxy S7" => {                                             [A]
+        "svart" => {                                                      [B/Index:C]                 
+            Stock  => "På lager (20+)",                                   [Index:B]
+            Plans => {                    
+              "NONSTOP M" => {                                            [C]
+                PayOpt => [
+                  { Upfront => 5399, Monthly => 299, Total => 8987 },     [D,E,F]
+                  { Upfront => 2399, Monthly => 549, Total => 8987 },     [D,E,F]
+                  { Upfront => 1199, Monthly => 649, Total => 8987 },     [D,E,F]
+                ]
+              },
+              "NONSTOP XL" => {
+                  PayOpt => [
+                    { Upfront => 4899, Monthly => 399, Total => 9687 },     [D,E,F]
+                    { Upfront => 1899, Monthly => 649, Total => 9687 },     [D,E,F]
+                    { Upfront =>  699, Monthly => 749, Total => 9687 },     [D,E,F]
+                  ]
+              },
+              ...        
+           }
+        },
+        "hvit" => {
+           ...
+        }
+        "gull" => {
+           ...
+        }
+        ...
+
+     }
+
+Note1: On this page, the prices for each color is the same, whereas on other phone models,
+the prices differs per color. That's why we need to deal with each color separately.
+       
+Note2: Norwegian number format is slightly different from English. We use . as a thousand
+separater and , as the decimal point. If there is no decimals, - is used. So examples:
+
+     1.000    => 1000
+     1.001,23 => 1001.23
+     1.004,-  => 1004
+
+It's acceptable to just leave these numbers "as is" if you don't want to write a converter and
+we can do the conversion on the system side for now.
+
+Note3: We'd like the scraper script to cache the scraped pages, so that it downloads all the
+pages into a /tmp/ directory and parses the file from there. Many of these phone company sites
+are blocking repeated requests by banning IPs to prevent scrapers, if there are too many
+request in a single day. We have made our current scrapers so they only download if needed,
+and we delete the tmp files to force a fresh load.
+
+Note4: We'd like to keep everything in a GitHub repository and assume you're familiar with
+using git. We will add specs for each site/scraper there as we go.
